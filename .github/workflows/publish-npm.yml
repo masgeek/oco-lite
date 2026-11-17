@@ -104,9 +104,14 @@ jobs:
         with:
           name: published-tgz
           path: ./dist/*.tgz
-      - name: Comment on release
+      - name: Note staged-publish status on the release
         if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release comment "${{ github.ref_name }}" --body "📦 npm stage publish succeeded — awaiting manual 2FA approval (\`npm stage approve\` or on npmjs.com) before this version goes live."
+          # There is no `gh release comment` (releases don't have comments the
+          # way issues/PRs do — gh release --help only lists create/edit/view/
+          # etc.) — append the status to the release notes instead.
+          NOTES="$(gh release view "${{ github.ref_name }}" --json body -q .body)"
+          STATUS=$'\n\n---\n📦 npm stage publish succeeded — awaiting manual 2FA approval (`npm stage approve` or on npmjs.com) before this version goes live.'
+          gh release edit "${{ github.ref_name }}" --notes "${NOTES}${STATUS}"

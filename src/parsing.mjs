@@ -1,5 +1,4 @@
 import { ALLOWED_TYPES, GITMOJI, BREAKING_GITMOJI } from './constants.mjs';
-import { breakingDetectionEnabled } from './cli-args.mjs';
 
 /** Extract and parse the first JSON object found in raw model output. */
 export function parseModelJson(raw) {
@@ -14,7 +13,7 @@ export function parseModelJson(raw) {
 }
 
 /** Build the final commit message string from the model's structured result. */
-export function formatCommitMessage(parsed) {
+export function formatCommitMessage(parsed, breakingDetectionEnabled = true) {
   const type = ALLOWED_TYPES.has(parsed.type) ? parsed.type : 'chore';
   const scope = typeof parsed.scope === 'string' ? parsed.scope.trim().replace(/[()]/g, '') : '';
   const subjectRaw = typeof parsed.subject === 'string' ? parsed.subject.trim() : '';
@@ -84,7 +83,7 @@ export function fallbackFromRawText(raw) {
   return { message: cleaned, breaking: false };
 }
 
-export function parseGroupingResult(raw, allFiles) {
+export function parseGroupingResult(raw, allFiles, breakingDetectionEnabled = true) {
   const parsed = parseModelJson(raw);
   if (!parsed || !Array.isArray(parsed.groups)) return null;
 
@@ -97,7 +96,7 @@ export function parseGroupingResult(raw, allFiles) {
     if (validFiles.length === 0) continue;
     validFiles.forEach((f) => seen.add(f));
 
-    const formatted = formatCommitMessage(g);
+    const formatted = formatCommitMessage(g, breakingDetectionEnabled);
     if (!formatted) continue;
 
     groups.push({ files: validFiles, message: formatted.message, breaking: formatted.breaking });

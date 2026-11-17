@@ -21,6 +21,14 @@ jobs:
       new_tag: ${{ steps.tag_version.outputs.new_tag }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ secrets.CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          
       - name: Determine if there are changes since last tag
         id: changes
         run: |
@@ -44,14 +52,14 @@ jobs:
         id: tag_version
         uses: masgeek/github-tag-action@release
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
           tag_prefix: ""
           create_annotated_tag: true
       - name: Create a GitHub release
         if: steps.changes.outputs.has_changes == 'true'
         uses: ncipollo/release-action@v1.21.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Version ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
@@ -67,7 +75,7 @@ jobs:
       - name: Cleanup on failure
         if: steps.changes.outputs.has_changes == 'true' && failure()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           git push --delete origin ${{ steps.tag_version.outputs.new_tag }} || true
           git tag -d ${{ steps.tag_version.outputs.new_tag }} || true

@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Syntax check (oco-lite.mjs + every src/**/*.mjs module)
+      - name: Syntax check + unit tests
         run: pnpm test
 
       - name: Smoke test (exercises the full module import graph)

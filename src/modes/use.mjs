@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as clack from '@clack/prompts';
-import { fileConfig, fileConfigPath, DEFAULT_HOSTS, DEFAULT_MODELS, PROVIDER } from '../config.mjs';
+import { loadConfig, DEFAULT_HOSTS, DEFAULT_MODELS } from '../config.mjs';
 import { getApiKeySecret } from '../secrets.mjs';
 import { GLOBAL_CONFIG_DIR, GLOBAL_CONFIG_PATH } from '../global-config.mjs';
 import { PROVIDER_OPTIONS, PROVIDER_LABELS } from '../provider-options.mjs';
@@ -20,6 +20,8 @@ const CLOUD_PROVIDERS = PROVIDER_OPTIONS.map((o) => o.value).filter((p) => p !==
  */
 export async function runUseMode() {
   clack.intro('oco-lite use');
+
+  const { fileConfig, fileConfigPath, PROVIDER } = await loadConfig();
 
   const candidates = [{ ...PROVIDER_OPTIONS[0], hint: 'no API key needed' }];
   for (const provider of CLOUD_PROVIDERS) {

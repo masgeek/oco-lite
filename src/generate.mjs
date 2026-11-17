@@ -1,5 +1,6 @@
 import chalk from 'chalk';
-import { MAX_DIFF } from './config.mjs';
+import { loadConfig } from './config.mjs';
+import { breakingDetectionEnabled } from './cli-args.mjs';
 import { getStagedDiff, truncateDiff } from './git.mjs';
 import { buildPrompt } from './prompts.mjs';
 import { parseModelJson, formatCommitMessage, fallbackFromRawText } from './parsing.mjs';
@@ -7,6 +8,7 @@ import { callModel } from './providers/index.mjs';
 import { die } from './die.mjs';
 
 export async function generateMessageForDiffText(diffText, label) {
+  const { MAX_DIFF } = await loadConfig();
   const diff = truncateDiff(diffText, MAX_DIFF);
   console.log();
 

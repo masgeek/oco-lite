@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { MAX_DIFF } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { getLastCommitMessage, getLastCommitDiff, truncateDiff } from '../git.mjs';
 import { buildPrompt } from '../prompts.mjs';
 import { parseModelJson } from '../parsing.mjs';
@@ -15,6 +15,7 @@ import { die } from '../die.mjs';
  * Exits non-zero if issues are found, so it's usable as a CI/hook gate.
  */
 export async function runCheckMode() {
+  const { MAX_DIFF } = await loadConfig();
   const message = getLastCommitMessage();
   const diff = truncateDiff(getLastCommitDiff(), MAX_DIFF);
 

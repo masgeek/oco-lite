@@ -1,22 +1,21 @@
-import { HOST, API_KEY } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { streamLines, wrapTimeoutError } from './stream.mjs';
 
-/** Local Ollama: /api/generate, NDJSON lines each a `{ response: "<token>" }` chunk. */
-export async function callOllamaOnce(prompt, model, spinner) {
+async function callOllama(prompt, model, spinner, { endpoint, headers, body, extract }) {
+  const { HOST } = await loadConfig();
   try {
     return await streamLines(
-      `${HOST}/api/generate`,
+      `${HOST}${endpoint}`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, prompt, stream: true, format: 'json', options: { temperature: 0.15 } }),
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify(body),
       },
       {
         onLine: (line) => {
           if (!line.trim()) return '';
           try {
-            const chunk = JSON.parse(line);
-            return typeof chunk.response === 'string' ? chunk.response : '';
+            return extract(JSON.parse(line));
           } catch {
             return '';
           }
@@ -27,8 +26,18 @@ export async function callOllamaOnce(prompt, model, spinner) {
       }
     );
   } catch (err) {
-    throw wrapTimeoutError(err, model);
+    throw await wrapTimeoutError(err, model);
   }
+}
+
+/** Local Ollama: /api/generate, NDJSON lines each a `{ response: "<token>" }` chunk. */
+export function callOllamaOnce(prompt, model, spinner) {
+  return callOllama(prompt, model, spinner, {
+    endpoint: '/api/generate',
+    headers: {},
+    body: { model, prompt, stream: true, format: 'json', options: { temperature: 0.15 } },
+    extract: (chunk) => (typeof chunk.response === 'string' ? chunk.response : ''),
+  });
 }
 
 /**
@@ -39,36 +48,17 @@ export async function callOllamaOnce(prompt, model, spinner) {
  * `{ message: { role, content } }` instead of `{ response }`.
  */
 export async function callOllamaCloudOnce(prompt, model, spinner) {
-  try {
-    return await streamLines(
-      `${HOST}/api/chat`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          stream: true,
-          format: 'json',
-          options: { temperature: 0.15 },
-        }),
-      },
-      {
-        onLine: (line) => {
-          if (!line.trim()) return '';
-          try {
-            const chunk = JSON.parse(line);
-            return typeof chunk.message?.content === 'string' ? chunk.message.content : '';
-          } catch {
-            return '';
-          }
-        },
-        onProgress: (full) => {
-          if (spinner) spinner.text = `Generating with ${model}... (${full.length} chars received)`;
-        },
-      }
-    );
-  } catch (err) {
-    throw wrapTimeoutError(err, model);
-  }
+  const { API_KEY } = await loadConfig();
+  return callOllama(prompt, model, spinner, {
+    endpoint: '/api/chat',
+    headers: { Authorization: `Bearer ${API_KEY}` },
+    body: {
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+      format: 'json',
+      options: { temperature: 0.15 },
+    },
+    extract: (chunk) => (typeof chunk.message?.content === 'string' ? chunk.message.content : ''),
+  });
 }

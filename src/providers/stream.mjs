@@ -1,4 +1,4 @@
-import { TIMEOUT_MS } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 
 /**
  * Shared streaming-request plumbing: POSTs to `url`, reads the response body
@@ -8,6 +8,7 @@ import { TIMEOUT_MS } from '../config.mjs';
  * a truly stalled one is.
  */
 export async function streamLines(url, options, { onLine, onProgress }) {
+  const { TIMEOUT_MS } = await loadConfig();
   const controller = new AbortController();
   let timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const bumpTimeout = () => {
@@ -52,8 +53,9 @@ export async function streamLines(url, options, { onLine, onProgress }) {
   }
 }
 
-export function wrapTimeoutError(err, model) {
+export async function wrapTimeoutError(err, model) {
   if (err && err.name === 'AbortError') {
+    const { TIMEOUT_MS } = await loadConfig();
     return new Error(`Request to "${model}" timed out after ${TIMEOUT_MS}ms of inactivity. Try a smaller diff or a faster model.`);
   }
   return err;

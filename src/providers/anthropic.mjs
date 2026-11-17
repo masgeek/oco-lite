@@ -1,8 +1,9 @@
-import { HOST, API_KEY } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { streamLines, wrapTimeoutError } from './stream.mjs';
 
 /** Anthropic Messages API: SSE "data: {...}" lines with content_block_delta events. */
 export async function callAnthropicOnce(prompt, model, spinner) {
+  const { HOST, API_KEY } = await loadConfig();
   try {
     return await streamLines(
       `${HOST}/v1/messages`,
@@ -40,6 +41,6 @@ export async function callAnthropicOnce(prompt, model, spinner) {
       }
     );
   } catch (err) {
-    throw wrapTimeoutError(err, model);
+    throw await wrapTimeoutError(err, model);
   }
 }

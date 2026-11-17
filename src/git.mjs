@@ -1,21 +1,21 @@
-import { execSync, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { die } from './die.mjs';
 
 export function assertGitRepo() {
   try {
-    execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' });
+    execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' });
   } catch {
     die('Not inside a git repository.');
   }
 }
 
 export function getStagedDiff(pathspec) {
-  const cmd = pathspec
-    ? `git diff --staged --no-color -- ${JSON.stringify(pathspec)}`
-    : 'git diff --staged --no-color';
+  const args = pathspec
+    ? ['diff', '--staged', '--no-color', '--', pathspec]
+    : ['diff', '--staged', '--no-color'];
   let diff;
   try {
-    diff = execSync(cmd, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 20 });
+    diff = execFileSync('git', args, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 20 });
   } catch {
     die('Failed to run `git diff --staged`.');
   }
@@ -25,12 +25,32 @@ export function getStagedDiff(pathspec) {
 
 export function getStagedFiles() {
   try {
-    return execSync('git diff --staged --name-only', { encoding: 'utf8' })
+    return execFileSync('git', ['diff', '--staged', '--name-only'], { encoding: 'utf8' })
       .split('\n')
       .filter(Boolean);
   } catch {
     return [];
   }
+}
+
+/** Unstaged + untracked working-tree changes, for the interactive staging prompt. */
+export function getWorkingTreeChanges() {
+  let output;
+  try {
+    output = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], { encoding: 'utf8' });
+  } catch {
+    return [];
+  }
+  return output
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const status = line.slice(0, 2).trim();
+      const rest = line.slice(3);
+      const arrowIdx = rest.indexOf(' -> ');
+      const file = arrowIdx === -1 ? rest : rest.slice(arrowIdx + 4);
+      return { status, file };
+    });
 }
 
 export function truncateDiff(diff, maxChars) {
@@ -84,16 +104,19 @@ export function commitWithMessage(message, pathspec) {
 /** Used by --check mode to re-classify the most recent commit. */
 export function getLastCommitMessage() {
   try {
-    return execSync('git log -1 --pretty=%B', { encoding: 'utf8' }).trim();
+    return execFileSync('git', ['log', '-1', '--pretty=%B'], { encoding: 'utf8' }).trim();
   } catch {
-    return die('Could not read the last commit message. Is there at least one commit?');
+    die('Could not read the last commit message. Is there at least one commit?');
   }
 }
 
 export function getLastCommitDiff() {
   try {
-    return execSync('git show --no-color --pretty=format: HEAD', { encoding: 'utf8', maxBuffer: 1024 * 1024 * 20 });
+    return execFileSync('git', ['show', '--no-color', '--pretty=format:', 'HEAD'], {
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024 * 20,
+    });
   } catch {
-    return die('Could not read the last commit diff.');
+    die('Could not read the last commit diff.');
   }
 }

@@ -1,11 +1,12 @@
 import ora from 'ora';
-import { PROVIDER, MODEL, FALLBACK_MODELS, HOST, API_KEY } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { die } from '../die.mjs';
 import { callOllamaOnce, callOllamaCloudOnce } from './ollama.mjs';
 import { callOpenAiOnce } from './openai.mjs';
 import { callAnthropicOnce } from './anthropic.mjs';
 
-function callModelOnce(prompt, model, spinner) {
+async function callModelOnce(prompt, model, spinner) {
+  const { PROVIDER } = await loadConfig();
   if (PROVIDER === 'openai') return callOpenAiOnce(prompt, model, spinner);
   if (PROVIDER === 'anthropic') return callAnthropicOnce(prompt, model, spinner);
   if (PROVIDER === 'ollama-cloud') return callOllamaCloudOnce(prompt, model, spinner);
@@ -18,6 +19,7 @@ function callModelOnce(prompt, model, spinner) {
  * fails or times out.
  */
 export async function callModel(prompt, label = 'response') {
+  const { MODEL, FALLBACK_MODELS } = await loadConfig();
   const modelsToTry = [MODEL, ...FALLBACK_MODELS];
   const spinner = ora(`Generating ${label} with ${MODEL}...`).start();
 
@@ -38,6 +40,8 @@ export async function callModel(prompt, label = 'response') {
 }
 
 export async function assertProviderReachable() {
+  const { PROVIDER, API_KEY, HOST } = await loadConfig();
+
   if (PROVIDER === 'openai' || PROVIDER === 'anthropic') {
     if (!API_KEY) {
       die(

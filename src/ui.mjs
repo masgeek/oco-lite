@@ -2,8 +2,15 @@ import readline from 'node:readline';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { autoYes } from './cli-args.mjs';
+
+export function printVersion() {
+  const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+  const { name, version } = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  console.log(`${name} v${version}`);
+}
 
 export function printHelp() {
   console.log(`oco-lite — commit message generator backed by a local or cloud model
@@ -23,6 +30,7 @@ Usage:
   oco-lite --check                re-classify HEAD's diff, warn if its message looks inconsistent
   oco-lite --no-breaking-detection  skip breaking-change classification
   oco-lite --help                 show this help
+  oco-lite --version              print the installed version
 
 At any confirmation prompt, answer "e" to edit the message in $GIT_EDITOR/$EDITOR before committing.
 

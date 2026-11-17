@@ -1,8 +1,9 @@
-import { HOST, API_KEY } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { streamLines, wrapTimeoutError } from './stream.mjs';
 
 /** OpenAI (and any OpenAI-compatible endpoint via OCOLITE_HOST — Groq, Together, OpenRouter, a self-hosted vLLM/LM Studio server, etc.): SSE "data: {...}" lines. */
 export async function callOpenAiOnce(prompt, model, spinner) {
+  const { HOST, API_KEY } = await loadConfig();
   try {
     return await streamLines(
       `${HOST}/chat/completions`,
@@ -36,6 +37,6 @@ export async function callOpenAiOnce(prompt, model, spinner) {
       }
     );
   } catch (err) {
-    throw wrapTimeoutError(err, model);
+    throw await wrapTimeoutError(err, model);
   }
 }

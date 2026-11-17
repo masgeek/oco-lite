@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import chalk from 'chalk';
-import { GROUP_MAX_DIFF_PER_FILE } from '../config.mjs';
+import { loadConfig } from '../config.mjs';
 import { getStagedDiff, getStagedFiles, truncateDiff } from '../git.mjs';
 import { buildGroupingPrompt } from '../prompts.mjs';
 import { parseGroupingResult } from '../parsing.mjs';
 import { callModel } from '../providers/index.mjs';
 import { confirmWithEdit } from '../ui.mjs';
-import { shouldCommit } from '../cli-args.mjs';
+import { shouldCommit, breakingDetectionEnabled } from '../cli-args.mjs';
 import { die } from '../die.mjs';
 import { runSingleMode } from './single.mjs';
 import { runStrictSplitMode } from './split.mjs';
@@ -22,6 +22,7 @@ import { runStrictSplitMode } from './split.mjs';
  * didn't parse into a valid grouping — the caller decides the fallback.
  */
 export async function runGroupedCommitFlow(files) {
+  const { GROUP_MAX_DIFF_PER_FILE } = await loadConfig();
   const fileEntries = files.map((path) => ({
     path,
     diff: truncateDiff(getStagedDiff(path), GROUP_MAX_DIFF_PER_FILE),
@@ -34,7 +35,7 @@ export async function runGroupedCommitFlow(files) {
     die(err.message);
   }
 
-  const groups = parseGroupingResult(raw, files);
+  const groups = parseGroupingResult(raw, files, breakingDetectionEnabled);
   if (!groups) return false;
 
   console.log(`\nDetected ${groups.length} logical group(s):\n`);
