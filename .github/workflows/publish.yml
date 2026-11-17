@@ -70,7 +70,7 @@ jobs:
           echo "package.json version set to $TAG_VERSION for this publish."
 
       - name: Publish (Trusted Publishing / OIDC)
-        run: npm publish --access public
+        run: npm publish --provenance --access public
         # Deliberately `npm publish`, not `pnpm publish` — Trusted Publishing
         # here relies on npm CLI v11+'s auto-detection of the GitHub Actions
         # OIDC context (no NODE_AUTH_TOKEN needed), which is tied to the
