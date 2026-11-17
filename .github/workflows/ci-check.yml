@@ -54,7 +54,7 @@ jobs:
         run: pnpm pack --pack-destination /tmp
 
       - name: Upload npm pack artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-pack
           path: /tmp/*.tgz
