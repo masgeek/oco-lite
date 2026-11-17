@@ -55,3 +55,15 @@ jobs:
           allowUpdates: true
           generateReleaseNotes: true
           skipIfReleaseExists: false
+      - name: Release summary
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          echo "## Release ${{ steps.tag_version.outputs.new_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Tag created by bump‑and‑tag workflow." >> $GITHUB_STEP_SUMMARY
+      - name: Cleanup on failure
+        if: steps.changes.outputs.has_changes == 'true' && failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push --delete origin ${{ steps.tag_version.outputs.new_tag }} || true
+          git tag -d ${{ steps.tag_version.outputs.new_tag }} || true

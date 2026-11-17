@@ -13,6 +13,9 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22, 24]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,7 +23,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,5 +47,14 @@ jobs:
       - name: Verify package.json is valid
         run: node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
 
+      - name: Security audit (production only)
+        run: npm audit --production
+
       - name: Dry-run pack (fails if 'files' list or bin path is broken)
         run: pnpm pack --pack-destination /tmp
+
+      - name: Upload npm pack artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-pack
+          path: /tmp/*.tgz
