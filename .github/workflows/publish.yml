@@ -6,7 +6,7 @@ on:
   # push:
   #   tags:
   #     - '*'
-  # workflow_dispatch:
+  workflow_dispatch:
 
 # Deliberately tag-push only, not also `release: types: [published]` — a
 # GitHub Release that creates a new tag already triggers this via the tag
