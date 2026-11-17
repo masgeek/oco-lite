@@ -2,9 +2,9 @@ name: Publish to npm
 
 on:
   release:
-    # Trigger on any release event (published, created, etc.)
-    # This ensures the workflow runs when bump-and-tag creates a release.
-    # Types can be omitted to catch all release actions.
+    # Published only — "created"/"prereleased" would double-fire alongside
+    # "published" for a non-draft release and race npm publish with itself.
+    types: [published]
   workflow_dispatch:
 
 # Deliberately tag-push only, not also `release: types: [published]` — a
@@ -19,7 +19,7 @@ on:
 # Trusted Publisher, pointing at this repo + this workflow filename.
 
 permissions:
-  contents: read
+  contents: write   # write needed so the "Comment on release" step can post
   id-token: write   # required — this is what lets npm mint the OIDC token
 
 jobs:
@@ -48,8 +48,6 @@ jobs:
         run: node oco-lite.mjs --help
       - name: Configure npm for scoped package
         run: npm config set @masgeek:registry https://registry.npmjs.org/
-      - name: Verify OIDC token is usable
-        run: npm whoami --registry=https://registry.npmjs.org/
 
       - name: Pin package.json version to the release tag
         env:
@@ -74,17 +72,28 @@ jobs:
           "
           echo "package.json version set to $TAG_VERSION for this publish."
 
-      - name: Publish (Trusted Publishing / OIDC)
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
-        # npm CLI v11+ auto-detects this in GitHub Actions for OIDC
-        # Deliberately `npm publish`, not `pnpm publish` — Trusted Publishing
-        # here relies on npm CLI v11+'s auto-detection of the GitHub Actions
-        # OIDC context (no NODE_AUTH_TOKEN needed), which is tied to the
-        # Trusted Publisher config on npmjs.com for this exact repo + workflow
-        # file. Switching package managers for this one step risks breaking
-        # that OIDC handshake, so every other step uses pnpm but this one stays npm.
+      - name: Stage publish (Trusted Publishing / OIDC)
+        run: npm stage publish --provenance --access public
+        # No NODE_AUTH_TOKEN here on purpose — npm CLI v11+ auto-detects the
+        # GitHub Actions OIDC context itself. Setting NODE_AUTH_TOKEN (even to
+        # GITHUB_TOKEN) makes npm try to auth with that invalid token instead
+        # of going through the Trusted Publisher OIDC exchange.
+        # Deliberately `npm`, not `pnpm` — Trusted Publishing here relies on
+        # npm CLI v11+'s auto-detection of the GitHub Actions OIDC context (no
+        # NODE_AUTH_TOKEN needed), tied to the Trusted Publisher config on
+        # npmjs.com for this exact repo + workflow file. Switching package
+        # managers for this one step risks breaking that OIDC handshake, so
+        # every other step uses pnpm but this one stays npm.
+        #
+        # `npm stage publish`, not `npm publish` — the Trusted Publisher on
+        # npmjs.com is configured stage-only, so the registry rejects a
+        # direct `npm publish` from CI outright. This step only stages the
+        # release; a human still has to run `npm stage approve <stage-id>`
+        # (or approve on npmjs.com) with 2FA before it actually goes live.
+        # That manual approval gate is the entire point — it means a
+        # compromised token/workflow can stage a release but never finalize
+        # one by itself.
+
       - name: Capture published tarball
         if: success()
         run: |
@@ -100,4 +109,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release comment "${{ github.ref_name }}" --body "✅ npm publish succeeded 🎉"
+          gh release comment "${{ github.ref_name }}" --body "📦 npm stage publish succeeded — awaiting manual 2FA approval (\`npm stage approve\` or on npmjs.com) before this version goes live."

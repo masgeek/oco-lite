@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: ['**']
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -48,7 +48,7 @@ jobs:
         run: node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
 
       - name: Security audit (production only)
-        run: npm audit --production
+        run: pnpm audit --production
 
       - name: Dry-run pack (fails if 'files' list or bin path is broken)
         run: pnpm pack --pack-destination /tmp
