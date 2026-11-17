@@ -1,10 +1,12 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - '*'
-  workflow_dispatch:
+  release:
+    types: [published]
+  # push:
+  #   tags:
+  #     - '*'
+  # workflow_dispatch:
 
 # Deliberately tag-push only, not also `release: types: [published]` — a
 # GitHub Release that creates a new tag already triggers this via the tag
