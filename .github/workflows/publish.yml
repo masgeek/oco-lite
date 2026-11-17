@@ -47,6 +47,8 @@ jobs:
 
       - name: Smoke test (exercises the full module import graph)
         run: node oco-lite.mjs --help
+      - name: Configure npm for scoped package
+        run: npm config set @masgeek:registry https://registry.npmjs.org/
 
       - name: Pin package.json version to the release tag
         env:

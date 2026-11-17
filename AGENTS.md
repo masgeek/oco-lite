@@ -33,6 +33,8 @@ npm version <patch|minor|major>   # updates package.json, git commit & tag
 git push --follow-tags           # triggers .github/workflows/publish.yml
 ```
 Tag names are unprefixed (e.g., `1.2.3`); `.npmrc` sets `tag-version-prefix=""`.
+> **Important**: The first published version must be created manually (using an npm token with `automation` access) before the CI OIDC Trusted Publishing can run. Subsequent releases are automated via the publish workflow.
+
 
 ## Gotchas Agents Might Miss
 - No test framework – the only verification is the syntax check above.
